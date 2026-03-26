@@ -7,7 +7,7 @@
 (function() {
     'use strict';
 
-    const API_KEY = 'ENTER API KEY HERE';
+    const API_KEY = 'AIzaSyD5hiTaErkXcNadDUpQanG4reMpC21zi5M';
     const MODEL = 'gemma-3-4b-it';
     const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -15,7 +15,7 @@
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
 
         // Explicit prompt to ensure formatting
-        const promptText = `Extract Multiple Choice Question (MCQ) data from the text below.
+        const promptText = `Extract multiple choice question data from the text below.
 Return ONLY a raw JSON object. Do not include markdown code blocks.
 The JSON must follow this exact structure:
 {
