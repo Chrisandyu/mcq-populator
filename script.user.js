@@ -7,9 +7,17 @@
 (function () {
   "use strict";
 
-  const API_KEY = "nothing to see here";
+  const API_KEY = "AIzaSyCJ8zuAfmEehRitxwY-D88OxkgU1Sw6bYA";
   const MODEL = "gemma-3-4b-it";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const OPTION_REMOVE_BUTTON = "button.lrn-qe-btn-remove";
+  const ADD_OPTION_BUTTON = 'button[aria-label="Option"]';
+  const QUESTION_BOX = 'div[aria-label="Compose question"]';
+  const ANSWERS = '.lrn-qe-edit-form [contenteditable="true"]';
+  const CHECKMARKS = '.lrn-qe-checkmark, input[type="radio"]';
+  const SHUFFLE_CHECKBOX =
+    '[data-lrn-qe-input-path="shuffle_options"] input[type="checkbox"]';
 
   async function callGemini(text) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${API_KEY}`;
@@ -40,6 +48,7 @@ in the question if it is needed to answer the question and IS NOT an option itse
 
 Text to extract from: ${text}`;
 
+    //call api
     const payload = {
       contents: [{ parts: [{ text: promptText }] }],
       generationConfig: {
@@ -65,6 +74,7 @@ Text to extract from: ${text}`;
 
             let aiResponseText = data.candidates[0].content.parts[0].text;
 
+            //Get rid of potential json quotes
             aiResponseText = aiResponseText
               .replace(/```json/g, "")
               .replace(/```/g, "")
@@ -83,6 +93,7 @@ Text to extract from: ${text}`;
     });
   }
 
+  //Thank you stack overflow
   async function setEditorText(element, text) {
     if (!element) return;
     element.focus();
@@ -99,24 +110,18 @@ Text to extract from: ${text}`;
     element.blur();
   }
 
-  async function adjustOptionCount(targetCount) {
-    let currentCount = document.querySelectorAll(
-      "button.lrn-qe-btn-remove",
-    ).length;
+  async function changeOptionNum(targetOptions) {
+    let numOptions = document.querySelectorAll(OPTION_REMOVE_BUTTON).length;
 
-    if (currentCount < targetCount) {
-      const addButton = document.querySelector('button[aria-label="Option"]');
-      if (addButton) {
-        for (let i = 0; i < targetCount - currentCount; i++) {
-          addButton.click();
-          await sleep(500);
-        }
+    if (numOptions < targetOptions) {
+      const addButton = document.querySelector(ADD_OPTION_BUTTON);
+      for (let i = 0; i < targetOptions - numOptions; i++) {
+        addButton.click();
+        await sleep(500);
       }
-    } else if (currentCount > targetCount) {
-      for (let i = currentCount - 1; i >= targetCount; i--) {
-        let currentButtons = document.querySelectorAll(
-          "button.lrn-qe-btn-remove",
-        );
+    } else if (numOptions > targetOptions) {
+      for (let i = numOptions - 1; i >= targetOptions; i--) {
+        let currentButtons = document.querySelectorAll(OPTION_REMOVE_BUTTON);
         if (currentButtons[i]) {
           currentButtons[i].click();
           await sleep(300);
@@ -128,54 +133,44 @@ Text to extract from: ${text}`;
 
   async function populateSchoologyQuestion(data) {
     const responseList = Object.values(data.responses).filter(
-      (val) => val !== null && val !== "" && val !== "null",
+      (val) => val != null && val != "" && val != "null",
     );
-    await adjustOptionCount(responseList.length);
+    await changeOptionNum(responseList.length);
 
-    const questionBox = document.querySelector(
-      'div[aria-label="Compose question"]',
-    );
-    if (questionBox) {
-      await setEditorText(questionBox, data.question);
-    }
+    const questionBox = document.querySelector(QUESTION_BOX);
+    await setEditorText(questionBox, data.question);
 
     for (let i = 0; i < responseList.length; i++) {
-      const allEditables = document.querySelectorAll(
-        '.lrn-qe-edit-form [contenteditable="true"]',
-      );
-      const actualAnswers = Array.from(allEditables).filter((box) => {
-        const label = box.getAttribute("aria-label") || "";
-        return label.includes("Label") || label.includes("Description");
-      });
+      const allPotentialAnswerBoxes = document.querySelectorAll(ANSWERS);
 
-      if (actualAnswers[i]) {
-        await setEditorText(actualAnswers[i], responseList[i]);
-        console.log(`filled ${i + 1}`);
-      }
+      //ghost box issue
+      const actualAnswers = Array.from(allPotentialAnswerBoxes).filter(
+        (box) => {
+          const label = box.getAttribute("aria-label") || "";
+          return label.includes("Label") || label.includes("Description");
+        },
+      );
+
+      await setEditorText(actualAnswers[i], responseList[i]);
     }
 
-    const checkmarks = document.querySelectorAll(
-      '.lrn-qe-checkmark, input[type="radio"]',
-    );
+    //click correct answer
+    const checkmarks = document.querySelectorAll(CHECKMARKS);
     if (checkmarks[data.answer - 1]) {
       checkmarks[data.answer - 1].click();
     }
 
-    const shuffleContainer = document.querySelector(
-      '[data-lrn-qe-input-path="shuffle_options"]',
-    );
-    if (shuffleContainer) {
-      const checkbox = shuffleContainer.querySelector('input[type="checkbox"]');
-      const trigger = shuffleContainer.querySelector(".lrn-qe-switch-trigger");
-      if (checkbox && !checkbox.checked && trigger) trigger.click();
-    }
+    //click shuffle options
+    const checkbox = document.querySelector(SHUFFLE_CHECKBOX);
+    if (checkbox && !checkbox.checked) checkbox.click();
   }
 
+  //notification
   function notify(text, isLoading = false) {
     const toast = document.createElement("div");
 
-    const spinnerHtml = isLoading ? `<div class="spinner"></div>` : "";
-    toast.innerHTML = `${spinnerHtml}<span>${text}</span>`;
+    const spinner = isLoading ? `<div class="spinner"> </div>` : "";
+    toast.innerHTML = `${spinner}<span>${text}</span>`;
 
     Object.assign(toast.style, {
       position: "fixed",
@@ -225,7 +220,7 @@ Text to extract from: ${text}`;
   document.addEventListener("keydown", async (e) => {
     if (e.ctrlKey && e.shiftKey && e.code === "KeyL") {
       const testData = {
-        question: "what is a chemical change?",
+        question: "What is a chemical change?",
         responses: {
           1: "water freezing",
           2: "wood burning",
@@ -238,24 +233,20 @@ Text to extract from: ${text}`;
     }
 
     if (e.ctrlKey && e.shiftKey && e.code === "KeyQ") {
-      try {
-        window.focus();
-        const clipboardText = await navigator.clipboard.readText();
-        console.log("clip done");
+      window.focus();
+      const clipboardText = await navigator.clipboard.readText();
+      console.log("clip done");
 
-        const loading = notify("loading", true);
+      const loading = notify("loading", true);
 
-        const aiData = await callGemini(clipboardText);
-        console.log("data done: ", aiData);
-        loading.remove();
+      const aiData = await callGemini(clipboardText);
+      console.log("data done: ", aiData);
+      loading.remove();
 
-        const pop = notify("populating", true);
-        await populateSchoologyQuestion(aiData);
-        pop.remove();
-        console.log("workflow success");
-      } catch (err) {
-        console.error("workflow failed:", err);
-      }
+      const pop = notify("populating", true);
+      await populateSchoologyQuestion(aiData);
+      pop.remove();
+      console.log("workflow success");
     }
   });
 })();
