@@ -7,7 +7,7 @@
 (function () {
   "use strict";
 
-  const API_KEY = "AIzaSyD5hiTaErkXcNadDUpQanG4reMpC21zi5M";
+  const API_KEY = "nothing to see here";
   const MODEL = "gemma-3-4b-it";
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
